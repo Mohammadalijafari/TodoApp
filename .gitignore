@@ -5,4 +5,4 @@ todos.db
 ./.idea
 .envrc
 __pycache__/
-
+/.idea
