@@ -1,0 +1,8 @@
+./.venv
+./.envrc
+testdb.db
+todos.db
+./.idea
+.envrc
+__pycache__/
+
