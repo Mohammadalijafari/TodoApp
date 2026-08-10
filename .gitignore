@@ -6,3 +6,4 @@ todos.db
 .envrc
 __pycache__/
 /.idea
+frontend/node_modules/

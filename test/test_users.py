@@ -72,6 +72,7 @@ def test_return_user(test_user):
     assert response.json()["last_name"] == "test"
     assert response.json()["role"] == "admin"
     assert response.json()["phone_number"] == "11111111"
+    assert "hashed_password" not in response.json()
 
 
 def test_change_password_success(test_user):
@@ -91,5 +92,9 @@ def test_change_password_invalid_password(test_user):
 
 
 def test_change_phone_number_success(test_user):
-    response = client.put("/users/phone_number/11111111")
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    response = client.put(
+        "/users/phone_number",
+        json={"phone_number": "22222222"},
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["phone_number"] == "22222222"

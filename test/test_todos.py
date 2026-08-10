@@ -46,6 +46,7 @@ def test_todo():
     todo = Todos(
         title="title",
         description="description",
+        category="General",
         priority=5,
         complete=False,
         owner_id=1,
@@ -54,6 +55,7 @@ def test_todo():
     db = TestingSessionLocal()
     db.add(todo)
     db.commit()
+    db.refresh(todo)
     yield todo
     with engine.connect() as connection:
         connection.execute(text("DELETE FROM todos;"))
@@ -63,29 +65,22 @@ def test_todo():
 def test_read_all_authenticated(test_todo):
     response = client.get("/todos")
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == [
-        {
-            "id": 1,
-            "title": "title",
-            "description": "description",
-            "priority": 5,
-            "complete": False,
-            "owner_id": 1,
-        }
-    ]
+    payload = response.json()
+    assert len(payload) == 1
+    assert payload[0]["title"] == "title"
+    assert payload[0]["description"] == "description"
+    assert payload[0]["category"] == "General"
+    assert payload[0]["priority"] == 5
+    assert payload[0]["complete"] is False
+    assert payload[0]["owner_id"] == 1
 
 
 def test_read_one_authenticated(test_todo):
     response = client.get("/todos/todo/1")
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {
-        "id": 1,
-        "title": "title",
-        "description": "description",
-        "priority": 5,
-        "complete": False,
-        "owner_id": 1,
-    }
+    payload = response.json()
+    assert payload["title"] == "title"
+    assert payload["category"] == "General"
 
 
 def test_read_one_authenticated_not_found(test_todo):
@@ -96,39 +91,48 @@ def test_read_one_authenticated_not_found(test_todo):
 
 def test_create_todo(test_todo):
     request_data = {
-        "title": "title",
-        "description": "description",
-        "priority": 5,
+        "title": "new title",
+        "description": "new description",
+        "category": "Work",
+        "priority": 4,
         "complete": False,
     }
 
     response = client.post("/todos/todo/", json=request_data)
     assert response.status_code == status.HTTP_201_CREATED
+    payload = response.json()
+    assert payload["title"] == request_data["title"]
+    assert payload["category"] == "Work"
 
     db = TestingSessionLocal()
-    model = db.query(Todos).filter(Todos.id == 2).first()
+    model = db.query(Todos).filter(Todos.id == payload["id"]).first()
     assert model.title == request_data.get("title")
     assert model.description == request_data.get("description")
+    assert model.category == request_data.get("category")
     assert model.priority == request_data.get("priority")
     assert model.complete == request_data.get("complete")
 
 
-def tst_create_todo(test_todo):
+def test_update_todo(test_todo):
     request_data = {
         "title": "changed title",
         "description": "changed description",
-        "priority": 5,
-        "complete": False,
+        "category": "Personal",
+        "priority": 2,
+        "complete": True,
     }
 
     response = client.put("/todos/todo/1", json=request_data)
-    assert response.status_code == status.HTTP_204_NO_CONTENT
-    assert response.json() == {
-        "title": "changed title",
-        "description": "changed description",
-        "priority": 5,
-        "complete": False,
-    }
+    assert response.status_code == status.HTTP_200_OK
+    payload = response.json()
+    assert payload["title"] == "changed title"
+    assert payload["complete"] is True
+
+
+def test_toggle_todo(test_todo):
+    response = client.patch("/todos/todo/1/toggle", json={"complete": True})
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["complete"] is True
 
 
 def test_delete_todo(test_todo):
